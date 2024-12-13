@@ -46,7 +46,7 @@ The Doctor Appointment Booking System is a web application that facilitates user
 - MongoDB (with Mongoose for schema design)
 
 ### **Authentication**
-- JWT or OAuth for secure login
+- JWT
 
 ### **Payment Gateway**
 - Stripe or Razorpay for secure appointment payments
@@ -190,5 +190,5 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 ## **Contact**
 For any inquiries or issues, contact:
 - **Name**: Satishkumar Oleti
-- **Email**: satishkumar.oleti@example.com (replace with your email)
+- **Email**: satisholeti1020@gmail.com
 
