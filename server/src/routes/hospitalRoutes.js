@@ -1,48 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const authMiddleware = require("../middleware/authMiddleware");
-const hospitalController = require("../controllers/hospitalController");
+const { addHospital, getAllHospitals, getHospitalById, updateHospital, deleteHospital } = require("../controllers/hospitalController");
+const { authMiddleware } = require("../middleware/authMiddleware");
+const { roleMiddleware } = require("../middleware/roleMiddleware");
 
-// Only 'admin' and 'hospital' roles can access these routes
-router.get(
-  "/",
-  authMiddleware.verifyToken,
-  authMiddleware.verifyRole(["admin", "hospital"]),
-  hospitalController.getHospitals
-);
-router.get(
-  "/:id",
-  authMiddleware.verifyToken,
-  authMiddleware.verifyRole(["admin", "hospital"]),
-  hospitalController.getHospitalById
-);
-router.post(
-  "/",
-  authMiddleware.verifyToken,
-  authMiddleware.verifyRole(["admin"]),
-  hospitalController.createHospital
-); // Only 'admin' can create
-router.put(
-  "/:id",
-  authMiddleware.verifyToken,
-  authMiddleware.verifyRole(["admin", "hospital"]),
-  hospitalController.updateHospital
-);
-router.delete(
-  "/:id",
-  authMiddleware.verifyToken,
-  authMiddleware.verifyRole(["admin"]),
-  hospitalController.deleteHospital
-); // Only 'admin' can delete
+// Add a new hospital (Only SuperAdmin or Admin can add hospitals)
+router.post("/add", authMiddleware, roleMiddleware(["SuperAdmin", "Admin"]), addHospital);
 
-router.get(
-  '/admin-dashboard',
-  authMiddleware.verifyToken,    // Verify token first
-  authMiddleware.verifyRole('admin'), // Then verify role
-  (req, res) => {
-    res.send('Welcome to the admin dashboard!');
-  }
-);
+// Get all hospitals (Accessible by all authenticated users)
+router.get("/", authMiddleware, getAllHospitals);
 
+// Get a hospital by ID
+router.get("/:id", authMiddleware, getHospitalById);
+
+// Update hospital details
+router.put("/:id", authMiddleware, roleMiddleware(["SuperAdmin", "Admin"]), updateHospital);
+
+// Delete a hospital
+router.delete("/:id", authMiddleware, roleMiddleware(["SuperAdmin"]), deleteHospital);
 
 module.exports = router;

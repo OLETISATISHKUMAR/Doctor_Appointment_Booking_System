@@ -1,111 +1,114 @@
 const Appointment = require('../models/Appointment');
 const Doctor = require('../models/Doctor');
-const responseHandler = require('../utils/responseHandler');
+const Patient = require('../models/Patient');
+const Hospital = require('../models/Hospital');
+const logger = require('../utils/logger');
+const { appointmentValidation, statusValidation } = require('../validation/appointmentValidation');
+
+// Create a new appointment
+exports.createAppointment = async (req, res) => {
+  const { error } = appointmentValidation(req.body);
+  if (error) {
+    return res.status(400).json({ msg: error.details[0].message });
+  }
+
+  const { patientId, doctorId, hospitalId, date, timeSlot, hospitalAddress, doctorQualification } = req.body;
+
+  try {
+    const patient = await Patient.findById(patientId);
+    const doctor = await Doctor.findById(doctorId);
+    const hospital = await Hospital.findById(hospitalId);
+
+    if (!patient || !doctor || !hospital) {
+      return res.status(404).json({ msg: 'Patient, Doctor, or Hospital not found' });
+    }
+
+    const newAppointment = new Appointment({
+      patient: patientId,
+      doctor: doctorId,
+      hospital: hospitalId,
+      date,
+      timeSlot,
+      hospitalAddress,
+      doctorQualification,
+    });
+
+    await newAppointment.save();
+    logger.info('Appointment created successfully');
+    res.status(201).json({ msg: 'Appointment created successfully', appointment: newAppointment });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
 
 // Get all appointments
-exports.getAppointments = async (req, res) => {
+exports.getAllAppointments = async (req, res) => {
   try {
-    const appointments = await Appointment.find().populate('user doctor hospital');
-    console.log('Success: Retrieved all appointments');
-    responseHandler.success(res, 200, appointments);
-  } catch (error) {
-    console.log('Error: Error fetching appointments', error);
-    responseHandler.error(res, 500, 'Error fetching appointments');
+    const appointments = await Appointment.find()
+      .populate('patient')
+      .populate('doctor')
+      .populate('hospital');
+    res.status(200).json({ appointments });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
 // Get appointment by ID
 exports.getAppointmentById = async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id).populate('user doctor hospital');
+    const appointment = await Appointment.findById(req.params.id)
+      .populate('patient')
+      .populate('doctor')
+      .populate('hospital');
     if (!appointment) {
-      console.log('Error: Appointment not found');
-      return responseHandler.error(res, 404, 'Appointment not found');
+      return res.status(404).json({ msg: 'Appointment not found' });
     }
-    console.log('Success: Retrieved appointment by ID');
-    responseHandler.success(res, 200, appointment);
-  } catch (error) {
-    console.log('Error: Error fetching appointment', error);
-    responseHandler.error(res, 500, 'Error fetching appointment');
+    res.status(200).json({ appointment });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
-// Validate time slot availability
-const validateTimeSlot = async (doctorId, timeSlot, appointmentDate) => {
-  const doctor = await Doctor.findById(doctorId);
-  if (!doctor) {
-    console.log('Error: Doctor not found');
-    throw new Error('Doctor not found');
+// Update appointment status
+exports.updateAppointmentStatus = async (req, res) => {
+  const { error } = statusValidation(req.body);
+  if (error) {
+    return res.status(400).json({ msg: error.details[0].message });
   }
 
-  const slotRange = appointmentDate.getHours() < 12 ? 'morning' : 'evening';
-  const availableSlots = doctor.availableTimeSlots.find(
-    slot => slot.range === slotRange
-  );
-
-  if (!availableSlots || !availableSlots.slots.includes(timeSlot)) {
-    console.log(`Error: Time slot ${timeSlot} is not available`);
-    throw new Error('Selected time slot is not available');
-  }
-};
-
-// Create a new appointment
-exports.createAppointment = async (req, res) => {
+  const { status } = req.body;
   try {
-    const { user, doctor, hospital, appointmentDate, timeSlot, timeSlotRange } = req.body;
-
-    // Validate time slot availability
-    await validateTimeSlot(doctor, timeSlot, appointmentDate);
-
-    const newAppointment = new Appointment({ user, doctor, hospital, appointmentDate, timeSlot, timeSlotRange });
-    await newAppointment.save();
-    console.log('Success: Appointment created');
-    responseHandler.success(res, 201, newAppointment);
-  } catch (error) {
-    console.log('Error: Error creating appointment', error.message || error);
-    responseHandler.error(res, 500, 'Error creating appointment');
-  }
-};
-
-// Update an appointment
-exports.updateAppointment = async (req, res) => {
-  try {
-    const { timeSlot, timeSlotRange } = req.body;
-
-    // Validate time slot availability
-    const appointment = await Appointment.findById(req.params.id);
-    if (!appointment) {
-      console.log('Error: Appointment not found');
-      return responseHandler.error(res, 404, 'Appointment not found');
-    }
-
-    await validateTimeSlot(appointment.doctor, timeSlot, appointment.appointmentDate);
-
     const updatedAppointment = await Appointment.findByIdAndUpdate(
       req.params.id,
-      { ...req.body },
+      { status },
       { new: true }
     );
-    console.log('Success: Appointment updated');
-    responseHandler.success(res, 200, updatedAppointment);
-  } catch (error) {
-    console.log('Error: Error updating appointment', error.message || error);
-    responseHandler.error(res, 500, 'Error updating appointment');
+    if (!updatedAppointment) {
+      return res.status(404).json({ msg: 'Appointment not found' });
+    }
+    logger.info('Appointment status updated successfully');
+    res.status(200).json({ msg: 'Appointment status updated successfully', appointment: updatedAppointment });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
 // Delete an appointment
 exports.deleteAppointment = async (req, res) => {
   try {
-    const appointment = await Appointment.findByIdAndDelete(req.params.id);
-    if (!appointment) {
-      console.log('Error: Appointment not found');
-      return responseHandler.error(res, 404, 'Appointment not found');
+    const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
+    if (!deletedAppointment) {
+      return res.status(404).json({ msg: 'Appointment not found' });
     }
-    console.log('Success: Appointment deleted');
-    responseHandler.success(res, 200, 'Appointment deleted');
-  } catch (error) {
-    console.log('Error: Error deleting appointment', error);
-    responseHandler.error(res, 500, 'Error deleting appointment');
+    logger.info('Appointment deleted successfully');
+    res.status(200).json({ msg: 'Appointment deleted successfully' });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
