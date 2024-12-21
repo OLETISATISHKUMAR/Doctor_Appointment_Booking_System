@@ -1,76 +1,65 @@
-const Hospital = require('../models/Hospital');
-const responseHandler = require('../utils/responseHandler');
+const Hospital = require("../models/Hospital");
+
+// Add a new hospital
+const addHospital = async (req, res) => {
+  const { name, address, contactDetails, password, consultationFees, policies, openingHours } = req.body;
+  try {
+    const hospital = new Hospital({ name, address, contactDetails, password, consultationFees, policies, openingHours });
+    await hospital.save();
+    res.status(201).json({ message: "Hospital added successfully", hospital });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error adding hospital", error });
+  }
+};
 
 // Get all hospitals
-exports.getHospitals = async (req, res) => {
+const getAllHospitals = async (req, res) => {
   try {
-    const hospitals = await Hospital.find();
-    console.log('Success: Retrieved all hospitals');
-    responseHandler.success(res, 200, hospitals);
+    const hospitals = await Hospital.find().populate("doctors branches");
+    res.status(200).json(hospitals);
   } catch (error) {
-    console.log('Error: Error fetching hospitals', error);
-    responseHandler.error(res, 500, 'Error fetching hospitals');
+    console.error(error);
+    res.status(500).json({ message: "Error fetching hospitals", error });
   }
 };
 
-// Get hospital by ID
-exports.getHospitalById = async (req, res) => {
+// Get a hospital by ID
+const getHospitalById = async (req, res) => {
   try {
-    const hospital = await Hospital.findById(req.params.id);
-    if (!hospital) {
-      console.log('Error: Hospital not found');
-      return responseHandler.error(res, 404, 'Hospital not found');
-    }
-    console.log('Success: Retrieved hospital by ID');
-    responseHandler.success(res, 200, hospital);
+    const hospital = await Hospital.findById(req.params.id).populate("doctors branches");
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+    res.status(200).json(hospital);
   } catch (error) {
-    console.log('Error: Error fetching hospital', error);
-    responseHandler.error(res, 500, 'Error fetching hospital');
+    console.error(error);
+    res.status(500).json({ message: "Error fetching hospital", error });
   }
 };
 
-// Create a new hospital
-exports.createHospital = async (req, res) => {
-  try {
-    const { name, address, contactNumber, email } = req.body;
-    const newHospital = new Hospital({ name, address, contactNumber, email });
-    await newHospital.save();
-    console.log('Success: Hospital created');
-    responseHandler.success(res, 201, newHospital);
-  } catch (error) {
-    console.log('Error: Error creating hospital', error);
-    responseHandler.error(res, 500, 'Error creating hospital');
-  }
-};
-
-// Update a hospital
-exports.updateHospital = async (req, res) => {
+// Update hospital details
+const updateHospital = async (req, res) => {
   try {
     const hospital = await Hospital.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!hospital) {
-      console.log('Error: Hospital not found');
-      return responseHandler.error(res, 404, 'Hospital not found');
-    }
-    console.log('Success: Hospital updated');
-    responseHandler.success(res, 200, hospital);
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+    res.status(200).json({ message: "Hospital updated successfully", hospital });
   } catch (error) {
-    console.log('Error: Error updating hospital', error);
-    responseHandler.error(res, 500, 'Error updating hospital');
+    console.error(error);
+    res.status(500).json({ message: "Error updating hospital", error });
   }
 };
 
 // Delete a hospital
-exports.deleteHospital = async (req, res) => {
+const deleteHospital = async (req, res) => {
   try {
-    const hospital = await Hospital.findByIdAndDelete(req.params.id);
-    if (!hospital) {
-      console.log('Error: Hospital not found');
-      return responseHandler.error(res, 404, 'Hospital not found');
-    }
-    console.log('Success: Hospital deleted');
-    responseHandler.success(res, 200, 'Hospital deleted');
+    const hospital = await Hospital.findById(req.params.id);
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+    await hospital.remove();
+    res.status(200).json({ message: "Hospital deleted successfully" });
   } catch (error) {
-    console.log('Error: Error deleting hospital', error);
-    responseHandler.error(res, 500, 'Error deleting hospital');
+    console.error(error);
+    res.status(500).json({ message: "Error deleting hospital", error });
   }
 };
+
+module.exports = { addHospital, getAllHospitals, getHospitalById, updateHospital, deleteHospital };

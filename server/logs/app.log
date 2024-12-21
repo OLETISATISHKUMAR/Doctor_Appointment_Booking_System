@@ -1,0 +1,8 @@
+error: Error registering patient: Patient validation failed: address.zipCode: Path `address.zipCode` is required., address.state: Path `address.state` is required., address.city: Path `address.city` is required., address.street: Path `address.street` is required., phone: Path `phone` is required. {"timestamp":"2024-12-14T07:51:12.749Z"}
+info: Patient registered successfully: alice.johnson@example.com {"timestamp":"2024-12-15T20:49:54.304Z"}
+info: Patient registered successfully: satish@gmail.com {"timestamp":"2024-12-15T20:53:14.723Z"}
+info: Patient registered successfully: satish@gmail.com {"timestamp":"2024-12-15T20:58:15.830Z"}
+info: Patient registered successfully: satish@gmail.com {"timestamp":"2024-12-15T21:08:04.316Z"}
+info: Patient registered successfully: satish@gmail.com {"timestamp":"2024-12-15T21:14:53.561Z"}
+info: Patient registered successfully: satish@gmail.com {"timestamp":"2024-12-15T21:20:08.733Z"}
+info: Patient registered successfully: user@gmail.com {"timestamp":"2024-12-15T21:21:11.961Z"}

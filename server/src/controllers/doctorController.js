@@ -1,91 +1,92 @@
 const Doctor = require('../models/Doctor');
-const responseHandler = require('../utils/responseHandler');
-
-// Get all doctors
-exports.getDoctors = async (req, res) => {
-  try {
-    const doctors = await Doctor.find();
-    console.log('Success: Retrieved all doctors');
-    responseHandler.success(res, 200, doctors);
-  } catch (error) {
-    console.log('Error: Error fetching doctors', error);
-    responseHandler.error(res, 500, 'Error fetching doctors');
-  }
-};
-
-// Get doctor by ID
-exports.getDoctorById = async (req, res) => {
-  try {
-    const doctor = await Doctor.findById(req.params.id);
-    if (!doctor) {
-      console.log('Error: Doctor not found');
-      return responseHandler.error(res, 404, 'Doctor not found');
-    }
-    console.log('Success: Retrieved doctor by ID');
-    responseHandler.success(res, 200, doctor);
-  } catch (error) {
-    console.log('Error: Error fetching doctor', error);
-    responseHandler.error(res, 500, 'Error fetching doctor');
-  }
-};
+const logger = require('../utils/logger');
+const { doctorCreateValidation, doctorUpdateValidation } = require('../validation/doctorValidation');
 
 // Create a new doctor
 exports.createDoctor = async (req, res) => {
+  const { error } = doctorCreateValidation(req.body);
+  if (error) return res.status(400).json({ msg: error.details[0].message });
+
+  const { name, email, specialization, qualification, hospital, fees, availability } = req.body;
   try {
-    const { name, specialization, hospital, contactNumber, email, qualification } = req.body;
+    const newDoctor = new Doctor({
+      name,
+      email,
+      specialization,
+      qualification,
+      hospital,
+      fees,
+      availability,
+    });
 
-    // Validation for required fields
-    if (!name || !specialization || !hospital || !contactNumber || !email || !qualification) {
-      console.log('Error: Missing required fields');
-      return responseHandler.error(res, 400, 'Missing required fields');
-    }
-
-    const newDoctor = new Doctor({ name, specialization, hospital, contactNumber, email, qualification });
     await newDoctor.save();
-    console.log('Success: Doctor created');
-    responseHandler.success(res, 201, newDoctor);
-  } catch (error) {
-    console.log('Error: Error creating doctor', error);
-    responseHandler.error(res, 500, 'Error creating doctor');
+    logger.info('Doctor created successfully');
+    res.status(201).json({ msg: 'Doctor created successfully', doctor: newDoctor });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
-// Update a doctor
-exports.updateDoctor = async (req, res) => {
+// Get all doctors
+exports.getAllDoctors = async (req, res) => {
   try {
-    const { name, specialization, hospital, contactNumber, email, qualification } = req.body;
+    const doctors = await Doctor.find().populate('hospital');
+    res.status(200).json({ doctors });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
 
-    // Validation for required fields
-    if (!name || !specialization || !hospital || !contactNumber || !email || !qualification) {
-      console.log('Error: Missing required fields');
-      return responseHandler.error(res, 400, 'Missing required fields');
-    }
-
-    const doctor = await Doctor.findByIdAndUpdate(req.params.id, { name, specialization, hospital, contactNumber, email, qualification }, { new: true });
+// Get a doctor by ID
+exports.getDoctorById = async (req, res) => {
+  try {
+    const doctor = await Doctor.findById(req.params.id).populate('hospital');
     if (!doctor) {
-      console.log('Error: Doctor not found');
-      return responseHandler.error(res, 404, 'Doctor not found');
+      return res.status(404).json({ msg: 'Doctor not found' });
     }
-    console.log('Success: Doctor updated');
-    responseHandler.success(res, 200, doctor);
-  } catch (error) {
-    console.log('Error: Error updating doctor', error);
-    responseHandler.error(res, 500, 'Error updating doctor');
+    res.status(200).json({ doctor });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Update doctor details
+exports.updateDoctor = async (req, res) => {
+  const { error } = doctorUpdateValidation(req.body);
+  if (error) return res.status(400).json({ msg: error.details[0].message });
+
+  const { name, email, specialization, qualification, hospital, fees, availability } = req.body;
+  try {
+    const updatedDoctor = await Doctor.findByIdAndUpdate(
+      req.params.id,
+      { name, email, specialization, qualification, hospital, fees, availability },
+      { new: true }
+    );
+    if (!updatedDoctor) {
+      return res.status(404).json({ msg: 'Doctor not found' });
+    }
+    logger.info('Doctor updated successfully');
+    res.status(200).json({ msg: 'Doctor updated successfully', doctor: updatedDoctor });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };
 
 // Delete a doctor
 exports.deleteDoctor = async (req, res) => {
   try {
-    const doctor = await Doctor.findByIdAndDelete(req.params.id);
-    if (!doctor) {
-      console.log('Error: Doctor not found');
-      return responseHandler.error(res, 404, 'Doctor not found');
+    const deletedDoctor = await Doctor.findByIdAndDelete(req.params.id);
+    if (!deletedDoctor) {
+      return res.status(404).json({ msg: 'Doctor not found' });
     }
-    console.log('Success: Doctor deleted');
-    responseHandler.success(res, 200, 'Doctor deleted');
-  } catch (error) {
-    console.log('Error: Error deleting doctor', error);
-    responseHandler.error(res, 500, 'Error deleting doctor');
+    logger.info('Doctor deleted successfully');
+    res.status(200).json({ msg: 'Doctor deleted successfully' });
+  } catch (err) {
+    logger.error(err.message);
+    res.status(500).json({ msg: 'Server error' });
   }
 };

@@ -1,46 +1,47 @@
-const express = require('express');
+const express = require("express");
+const { register, login } = require("../controllers/authController");
 const router = express.Router();
-const authController = require('../controllers/authController');
-const { body, validationResult } = require('express-validator'); // For validation
 
-// Request validation for signup and login
-const signupValidation = [
-  body('name').notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('A valid email is required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
-];
+// Validator middleware (using express-validator for request validation)
+const { check, validationResult } = require("express-validator");
 
-const loginValidation = [
-  body('email').isEmail().withMessage('A valid email is required'),
-  body('password').notEmpty().withMessage('Password is required')
-];
+// Registration Route with validation checks
+router.post(
+  "/register",
+  [
+    check("name", "Name is required").notEmpty(),
+    check("email", "Please include a valid email").isEmail(),
+    check("password", "Password must be at least 6 characters").isLength({ min: 6 }),
+  ],
+  async (req, res, next) => {
+    // Validate the request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-// Validation check middleware
-const validateRequest = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    // Call register controller if validation passes
+    return await register(req, res);
   }
-  next();
-};
-
-// User signup route
-router.post(
-  '/signup',
-  signupValidation, // Validate signup fields
-  validateRequest,   // Check validation errors
-  authController.signup
 );
 
-// User login route
+// Login Route with validation checks
 router.post(
-  '/login',
-  loginValidation, // Validate login fields
-  validateRequest, // Check validation errors
-  authController.login
+  "/login",
+  [
+    check("email", "Please include a valid email").isEmail(),
+    check("password", "Password is required").notEmpty(),
+  ],
+  async (req, res, next) => {
+    // Validate the request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    // Call login controller if validation passes
+    return await login(req, res);
+  }
 );
-
-
-
 
 module.exports = router;
